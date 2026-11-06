@@ -7,8 +7,9 @@ async function bootstrap() {
   await prisma.$connect();
 
   const app = createApp();
-  // Chỉ nghe trên máy local, ra ngoài đi qua proxy /api của Next.js
-  const host = "127.0.0.1";
+  // Mặc định chỉ nghe trên máy local, ra ngoài đi qua proxy /api (nginx hoặc Next.js).
+  // Trong Docker đặt HOST=0.0.0.0 (cổng vẫn chỉ publish ra 127.0.0.1 của server).
+  const host = env.host;
   const server = app.listen(env.port, host, function onListening() {
     console.log("[server] API sẵn sàng tại http://" + host + ":" + env.port + "/api");
   });

@@ -10,6 +10,8 @@ const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   isProduction: process.env.NODE_ENV === "production",
   port: toInt(process.env.PORT, 8080),
+  // Mặc định chỉ nghe máy local. Trong Docker đặt HOST=0.0.0.0 để container khác gọi được.
+  host: process.env.HOST || "127.0.0.1",
   databaseUrl: process.env.DATABASE_URL,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: "3h",
@@ -24,7 +26,10 @@ const env = {
     .map((origin) => origin.trim().replace(/\/+$/, ""))
     .filter(Boolean),
   // catalog.json nằm ở public của frontend (chung repo)
-  labCatalogPath: path.resolve(__dirname, "../../../frontend/public/items/catalog.json"),
+  // Trong Docker trỏ LAB_CATALOG_PATH tới volume dùng chung với frontend.
+  labCatalogPath: process.env.LAB_CATALOG_PATH
+    ? path.resolve(process.env.LAB_CATALOG_PATH)
+    : path.resolve(__dirname, "../../../frontend/public/items/catalog.json"),
 };
 
 // Dừng server ngay nếu thiếu biến môi trường bắt buộc
