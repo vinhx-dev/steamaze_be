@@ -53,4 +53,26 @@ async function refresh(req, res) {
   return sendSuccess(res, result, "Làm mới phiên đăng nhập thành công");
 }
 
-module.exports = { register, login, me, refresh };
+async function googleLogin(req, res) {
+  const { credential } = req.body || {};
+  const result = await authService.loginWithGoogle(credential);
+
+  if (result.refreshToken) {
+    res.cookie("refreshToken", result.refreshToken, REFRESH_COOKIE_OPTIONS);
+  }
+
+  return sendSuccess(res, result, "Đăng nhập Google thành công");
+}
+
+async function facebookLogin(req, res) {
+  const { accessToken } = req.body || {};
+  const result = await authService.loginWithFacebook(accessToken);
+
+  if (result.refreshToken) {
+    res.cookie("refreshToken", result.refreshToken, REFRESH_COOKIE_OPTIONS);
+  }
+
+  return sendSuccess(res, result, "Đăng nhập Facebook thành công");
+}
+
+module.exports = { register, login, me, refresh, googleLogin, facebookLogin };

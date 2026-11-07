@@ -115,14 +115,21 @@ async function updateUser(id, payload, actor) {
     // lấy được phiên đăng nhập rồi đổi mật khẩu để chiếm luôn tài khoản.
     // Admin đặt lại mật khẩu cho người khác (trang quản trị) thì không cần.
     if (actor.role !== "ADMIN") {
-      if (typeof currentPassword !== "string" || !currentPassword) {
-        throw AppError.badRequest("Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu", {
-          field: "currentPassword",
-        });
-      }
       const record = await prisma.user.findUnique({ where: { id }, select: { password: true } });
-      if (!record || !(await comparePassword(currentPassword, record.password))) {
-        throw AppError.badRequest("Mật khẩu hiện tại không đúng", { field: "currentPassword" });
+      if (!record) {
+        throw AppError.notFound("Không tìm thấy người dùng");
+      }
+      // Nếu tài khoản đã có mật khẩu thì kiểm tra currentPassword.
+      // Nếu tài khoản tạo bằng Google (password null) thì cho phép đặt mật khẩu mới không cần currentPassword.
+      if (record.password) {
+        if (typeof currentPassword !== "string" || !currentPassword) {
+          throw AppError.badRequest("Vui lòng nhập mật khẩu hiện tại để đổi mật khẩu", {
+            field: "currentPassword",
+          });
+        }
+        if (!(await comparePassword(currentPassword, record.password))) {
+          throw AppError.badRequest("Mật khẩu hiện tại không đúng", { field: "currentPassword" });
+        }
       }
     }
     data.password = await hashPassword(password);

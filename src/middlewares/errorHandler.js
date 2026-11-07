@@ -76,7 +76,7 @@ function normalizeError(err) {
 function sanitizeBody(body) {
   if (!body || typeof body !== "object") return undefined;
   const sanitized = { ...body };
-  const sensitiveKeys = ["password", "token", "refreshToken", "currentPassword", "newPassword"];
+  const sensitiveKeys = ["password", "token", "refreshToken", "currentPassword", "newPassword", "credential", "accessToken"];
   for (const key of sensitiveKeys) {
     if (key in sanitized) {
       sanitized[key] = "[REDACTED]";

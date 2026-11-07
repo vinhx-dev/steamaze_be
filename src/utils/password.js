@@ -6,6 +6,9 @@ function hashPassword(plainPassword) {
 }
 
 function comparePassword(plainPassword, hashedPassword) {
+  if (!plainPassword || !hashedPassword || typeof hashedPassword !== "string") {
+    return false;
+  }
   return bcrypt.compare(plainPassword, hashedPassword);
 }
 

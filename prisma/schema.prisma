@@ -20,7 +20,10 @@ enum UserRole {
 model User {
   id        String   @id @default(uuid())
   username  String   @unique @db.VarChar(50)
-  password  String   @db.VarChar(255) // luôn lưu dạng bcrypt hash, không bao giờ lưu plaintext
+  password  String?  @db.VarChar(255) // bcrypt hash; null nếu tài khoản tạo bằng Google
+  email     String?  @unique @db.VarChar(255)
+  googleId  String?  @unique @db.VarChar(64)
+  facebookId String? @unique @db.VarChar(64)
   avatarUrl          String?
   inventoryAvatarUrl String?
   role               UserRole @default(MEMBER)

@@ -30,6 +30,11 @@ const env = {
   labCatalogPath: process.env.LAB_CATALOG_PATH
     ? path.resolve(process.env.LAB_CATALOG_PATH)
     : path.resolve(__dirname, "../../../frontend/public/items/catalog.json"),
+  // Google OAuth Client ID (tùy chọn: nếu thiếu thì chỉ vô hiệu hóa route /auth/google)
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  // Facebook App ID & App Secret (tùy chọn: nếu thiếu thì chỉ vô hiệu hóa route /auth/facebook)
+  facebookAppId: process.env.FACEBOOK_APP_ID,
+  facebookAppSecret: process.env.FACEBOOK_APP_SECRET,
 };
 
 // Dừng server ngay nếu thiếu biến môi trường bắt buộc

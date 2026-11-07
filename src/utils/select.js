@@ -1,7 +1,8 @@
-// Các trường được phép trả ra ngoài - tuyệt đối không có password
+// Các trường được phép trả ra ngoài - tuyệt đối không có password hay googleId
 const USER_PUBLIC_SELECT = {
   id: true,
   username: true,
+  email: true,
   avatarUrl: true,
   inventoryAvatarUrl: true,
   role: true,
