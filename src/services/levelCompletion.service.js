@@ -19,7 +19,7 @@ const { AppError } = require("../utils/AppError");
 
 /** Bài học này có phải màn chơi thường (không yêu cầu đồ) không */
 function isPlayableLevel(lesson) {
-  return lesson.published && !lesson.path;
+  return lesson.published && !lesson.comingSoon && !lesson.path;
 }
 
 /**
@@ -34,6 +34,7 @@ async function verifyLevelCompletion(userId, lessonId) {
       slug: true,
       path: true,
       published: true,
+      comingSoon: true,
       roomId: true,
     },
   });

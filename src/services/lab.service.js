@@ -22,6 +22,7 @@ async function listLessons() {
       path: true,
       requiredSlots: true,
       published: true,
+      comingSoon: true,
       order: true,
       imageUrl: true,
       roomId: true,
@@ -44,7 +45,7 @@ async function listLessons() {
 // Câu vào phòng thí nghiệm bằng slug. Chỉ kiểm tra bài tồn tại và đã xuất bản:
 // người chơi được vào dù không mặc đồ, đồ đã mặc chỉ để vẽ lên cơ thể trong
 // bài (xem requiredSlots ở listLessons).
-async function enterLab(userId, slug) {
+async function enterLab(userId, slug, role = null) {
   if (!slug || typeof slug !== "string" || !slug.trim()) {
     throw AppError.badRequest("Slug bài học không hợp lệ");
   }
@@ -64,11 +65,19 @@ async function enterLab(userId, slug) {
       path: true,
       requiredSlots: true,
       published: true,
+      comingSoon: true,
     },
   });
 
   if (!lesson) {
     throw AppError.notFound("Không tìm thấy bài học thí nghiệm hoặc chưa được xuất bản");
+  }
+
+  // Bài đang khoá "Sắp ra mắt": chỉ admin được vào để kiểm tra
+  if (lesson.comingSoon && role !== "ADMIN") {
+    throw AppError.forbidden("Bài học này sắp ra mắt, bạn quay lại sau nhé!", {
+      reason: "COMING_SOON",
+    });
   }
 
   // Đồ đang mặc (DB = nguồn sự thật), luôn sort để client so sánh được với

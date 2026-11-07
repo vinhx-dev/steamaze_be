@@ -106,6 +106,7 @@ const LESSON_SELECT = {
   path: true,
   requiredSlots: true,
   published: true,
+  comingSoon: true,
   createdAt: true,
   updatedAt: true,
 };

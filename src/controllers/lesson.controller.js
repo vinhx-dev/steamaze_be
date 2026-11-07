@@ -24,13 +24,14 @@ async function getLesson(req, res) {
 }
 
 async function createLesson(req, res) {
-  const { name, imageUrl, html, order, published } = req.body || {};
+  const { name, imageUrl, html, order, published, comingSoon } = req.body || {};
   const lesson = await lessonService.createLesson(req.params.roomId, {
     name,
     imageUrl,
     html,
     order,
     published,
+    comingSoon,
   });
 
   return sendCreated(res, served(lesson), "Thêm bài học thành công");

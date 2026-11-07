@@ -191,7 +191,7 @@ async function getItemById(id, userId = null) {
 /**
  * Admin: Tạo sản phẩm mới
  */
-async function createItem({ name, description, imageUrl, coinPrice, isSpecial, stock }) {
+async function createItem({ name, description, imageUrl, coinPrice, isSpecial, stock, comingSoon }) {
   if (typeof name !== "string" || !name.trim()) {
     throw AppError.badRequest("Tên sản phẩm không được để trống", { field: "name" });
   }
@@ -222,6 +222,7 @@ async function createItem({ name, description, imageUrl, coinPrice, isSpecial, s
       isSpecial: Boolean(isSpecial),
       stock: parsedStock,
       isActive: true,
+      comingSoon: Boolean(comingSoon),
     },
   });
 
@@ -269,6 +270,9 @@ async function updateItem(id, data) {
   }
   if (data.isActive !== undefined) {
     updateData.isActive = Boolean(data.isActive);
+  }
+  if (data.comingSoon !== undefined) {
+    updateData.comingSoon = Boolean(data.comingSoon);
   }
   if (data.stock !== undefined) {
     if (data.stock === null || data.stock === "") {
@@ -339,6 +343,11 @@ async function purchaseItem({ userId, itemId, contactInfo, note }) {
     });
     if (!item || !item.isActive) {
       throw AppError.notFound("Vật phẩm không tồn tại hoặc đã ngừng bán.");
+    }
+    if (item.comingSoon) {
+      throw AppError.badRequest("Vật phẩm này sắp ra mắt, chưa thể mua được.", {
+        reason: "COMING_SOON",
+      });
     }
 
     // 2. Kiểm tra đã sở hữu chưa

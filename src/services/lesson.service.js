@@ -45,10 +45,17 @@ async function getLessonById(id, currentUser = null) {
     throw AppError.notFound("Không tìm thấy bài học");
   }
 
+  // Bài học đang khoá "Sắp ra mắt": người chơi không được mở (không trả html)
+  if (currentUser?.role !== "ADMIN" && lesson.comingSoon) {
+    throw AppError.forbidden("Bài học này sắp ra mắt, bạn quay lại sau nhé!", {
+      reason: "COMING_SOON",
+    });
+  }
+
   return attachLessonTimeTag(lesson);
 }
 
-async function createLesson(roomId, { name, imageUrl, html, order, published }) {
+async function createLesson(roomId, { name, imageUrl, html, order, published, comingSoon }) {
   await getRoomById(roomId);
 
   const data = {
@@ -69,6 +76,10 @@ async function createLesson(roomId, { name, imageUrl, html, order, published }) 
 
   if (published !== undefined) {
     data.published = Boolean(published);
+  }
+
+  if (comingSoon !== undefined) {
+    data.comingSoon = Boolean(comingSoon);
   }
 
   const created = await prisma.lesson.create({
@@ -100,6 +111,9 @@ async function updateLesson(id, payload) {
   }
   if (payload.published !== undefined) {
     data.published = Boolean(payload.published);
+  }
+  if (payload.comingSoon !== undefined) {
+    data.comingSoon = Boolean(payload.comingSoon);
   }
 
   if (Object.keys(data).length === 0) {

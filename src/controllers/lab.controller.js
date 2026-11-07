@@ -8,7 +8,7 @@ async function enterLab(req, res) {
   if (!userId) {
     throw AppError.unauthorized("Chưa đăng nhập", "UNAUTHORIZED");
   }
-  const result = await labService.enterLab(userId, req.params.slug);
+  const result = await labService.enterLab(userId, req.params.slug, req.user?.role);
   return sendSuccess(res, result, "Vào phòng thí nghiệm thành công");
 }
 
