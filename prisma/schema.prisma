@@ -184,6 +184,10 @@ model Lesson {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Thưởng xu khi hoàn thành bài học
+  firstPlayCoins Int      @default(1)
+  replayCoins    Int      @default(0)
+
   // --- Bài học dạng plugin ---
   // Bài học hand tracking không nhúng html vào DB mà trỏ tới 1 file độc lập
   // trong public/lab-lessons/<slug>/index.html. Thêm bài mới chỉ cần thả file
@@ -315,13 +319,16 @@ model DailyCheckIn {
   @@map("daily_check_ins")
 }
 
-// Ghi nhận thưởng bài học: mỗi bài học chỉ nhận 1 xu duy nhất 1 lần
+// Ghi nhận thưởng bài học: mỗi bài học hoàn thành được lưu tại đây
 model UserLessonReward {
-  id        String   @id @default(uuid())
-  userId    String
-  lessonId  String
-  coins     Int      @default(1)
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  userId          String
+  lessonId        String
+  coins           Int      @default(1) // Số xu nhận ở lần đầu hoàn thành
+  completionCount Int      @default(1) // Số lần hoàn thành
+  totalCoins      Int      @default(0) // Tổng xu đã nhận từ bài này
+  lastCompletedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)

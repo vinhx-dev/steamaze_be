@@ -107,6 +107,8 @@ const LESSON_SELECT = {
   requiredSlots: true,
   published: true,
   comingSoon: true,
+  firstPlayCoins: true,
+  replayCoins: true,
   createdAt: true,
   updatedAt: true,
 };

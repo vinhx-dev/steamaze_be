@@ -36,6 +36,8 @@ async function verifyLevelCompletion(userId, lessonId) {
       published: true,
       comingSoon: true,
       roomId: true,
+      firstPlayCoins: true,
+      replayCoins: true,
     },
   });
 
@@ -89,7 +91,10 @@ async function completeLevel(userId, lessonId, score) {
     });
   }
 
-  // Kiểm tra xem người chơi đã từng nhận xu thưởng cho bài học này chưa
+  const firstPlayCoins = verdict.lesson.firstPlayCoins ?? 1;
+  const replayCoins = verdict.lesson.replayCoins ?? 0;
+
+  // Kiểm tra trước để tối ưu cho các lần chơi lại
   const existingReward = await prisma.userLessonReward.findUnique({
     where: {
       userId_lessonId: {
@@ -99,46 +104,93 @@ async function completeLevel(userId, lessonId, score) {
     },
   });
 
-  if (existingReward) {
-    // Đã nhận thưởng xu cho bài học này trước đó -> Không cộng thêm
-    const currentUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { coins: true },
-    });
+  let isFirstCompletion = false;
+  let rewardRecord = null;
+  let updatedUser = null;
 
-    return {
-      rewards: [],
-      coinsEarned: 0,
-      alreadyRewarded: true,
-      userCoins: currentUser ? currentUser.coins : 0,
-      message: "Bạn đã nhận thưởng 1 xu cho bài học này trước đó.",
-    };
+  if (!existingReward) {
+    try {
+      // Lần đầu hoàn thành bài học: Thử tạo UserLessonReward và cộng firstPlayCoins
+      const [createdReward, user] = await prisma.$transaction([
+        prisma.userLessonReward.create({
+          data: {
+            userId,
+            lessonId,
+            coins: firstPlayCoins,
+            completionCount: 1,
+            totalCoins: firstPlayCoins,
+            lastCompletedAt: new Date(),
+          },
+        }),
+        prisma.user.update({
+          where: { id: userId },
+          data: firstPlayCoins > 0 ? { coins: { increment: firstPlayCoins } } : {},
+          select: { coins: true },
+        }),
+      ]);
+
+      rewardRecord = createdReward;
+      updatedUser = user;
+      isFirstCompletion = true;
+    } catch (err) {
+      if (err.code === "P2002") {
+        // Xảy ra race condition: một request song song khác đã tạo bản ghi trước
+        // Coi như lần này là chơi lại và xử lý tiếp ở khối bên dưới
+      } else {
+        throw err;
+      }
+    }
   }
 
-  // Lần đầu hoàn thành bài học: Cộng 1 xu duy nhất vào tài khoản người chơi
-  const [, updatedUser] = await prisma.$transaction([
-    prisma.userLessonReward.create({
-      data: {
-        userId,
-        lessonId,
-        coins: 1,
-      },
-    }),
-    prisma.user.update({
-      where: { id: userId },
-      data: {
-        coins: { increment: 1 },
-      },
-      select: { coins: true },
-    }),
-  ]);
+  // Nếu đã từng hoàn thành (hoặc bị lỗi P2002 do race condition) -> Tính là chơi lại
+  if (!isFirstCompletion) {
+    const [updatedReward, user] = await prisma.$transaction([
+      prisma.userLessonReward.update({
+        where: {
+          userId_lessonId: {
+            userId,
+            lessonId,
+          },
+        },
+        data: {
+          completionCount: { increment: 1 },
+          totalCoins: { increment: replayCoins },
+          lastCompletedAt: new Date(),
+        },
+      }),
+      prisma.user.update({
+        where: { id: userId },
+        data: replayCoins > 0 ? { coins: { increment: replayCoins } } : {},
+        select: { coins: true },
+      }),
+    ]);
+
+    rewardRecord = updatedReward;
+    updatedUser = user;
+  }
+
+  const coinsEarned = isFirstCompletion ? firstPlayCoins : replayCoins;
+  let message;
+  if (isFirstCompletion) {
+    message =
+      coinsEarned > 0
+        ? `Chúc mừng bạn đã hoàn thành bài học! +${coinsEarned} Xu đã được cộng vào tài khoản.`
+        : "Chúc mừng bạn đã hoàn thành bài học!";
+  } else {
+    message =
+      coinsEarned > 0
+        ? `Chúc mừng bạn đã hoàn thành lại bài học! +${coinsEarned} Xu đã được cộng vào tài khoản.`
+        : "Bạn đã hoàn thành lại bài học (lần này không có thêm xu thưởng).";
+  }
 
   return {
     rewards: [],
-    coinsEarned: 1,
-    alreadyRewarded: false,
+    coinsEarned,
+    isFirstCompletion,
+    alreadyRewarded: !isFirstCompletion,
+    completionCount: rewardRecord.completionCount,
     userCoins: updatedUser.coins,
-    message: "Chúc mừng bạn đã hoàn thành bài học! +1 Xu đã được cộng vào tài khoản.",
+    message,
   };
 }
 

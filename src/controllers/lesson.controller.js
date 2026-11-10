@@ -24,7 +24,7 @@ async function getLesson(req, res) {
 }
 
 async function createLesson(req, res) {
-  const { name, imageUrl, html, order, published, comingSoon } = req.body || {};
+  const { name, imageUrl, html, order, published, comingSoon, firstPlayCoins, replayCoins } = req.body || {};
   const lesson = await lessonService.createLesson(req.params.roomId, {
     name,
     imageUrl,
@@ -32,6 +32,8 @@ async function createLesson(req, res) {
     order,
     published,
     comingSoon,
+    firstPlayCoins,
+    replayCoins,
   });
 
   return sendCreated(res, served(lesson), "Thêm bài học thành công");

@@ -5,6 +5,7 @@ const {
   validateOptionalImageUrl,
   validateLessonHtml,
   validateOrder,
+  validateCoinReward,
 } = require("../utils/validators");
 const { LESSON_SELECT, LESSON_DETAIL_SELECT } = require("../utils/select");
 const { getRoomById } = require("./room.service");
@@ -26,7 +27,25 @@ async function listLessons(roomId, currentUser = null) {
     orderBy: LESSON_ORDER_BY,
   });
 
-  return lessons.map(attachLessonTimeTag);
+  let completedLessonIds = new Set();
+  if (currentUser?.id && lessons.length > 0) {
+    const rewards = await prisma.userLessonReward.findMany({
+      where: {
+        userId: currentUser.id,
+        lessonId: { in: lessons.map((l) => l.id) },
+      },
+      select: { lessonId: true },
+    });
+    completedLessonIds = new Set(rewards.map((r) => r.lessonId));
+  }
+
+  return lessons.map((lesson) => {
+    const withTag = attachLessonTimeTag(lesson);
+    return {
+      ...withTag,
+      isCompleted: completedLessonIds.has(lesson.id),
+    };
+  });
 }
 
 // Chi tiết bài học, trả kèm mã html thuần để khung chạy
@@ -52,16 +71,35 @@ async function getLessonById(id, currentUser = null) {
     });
   }
 
-  return attachLessonTimeTag(lesson);
+  let isCompleted = false;
+  if (currentUser?.id) {
+    const reward = await prisma.userLessonReward.findUnique({
+      where: {
+        userId_lessonId: {
+          userId: currentUser.id,
+          lessonId: id,
+        },
+      },
+      select: { id: true },
+    });
+    isCompleted = Boolean(reward);
+  }
+
+  return {
+    ...attachLessonTimeTag(lesson),
+    isCompleted,
+  };
 }
 
-async function createLesson(roomId, { name, imageUrl, html, order, published, comingSoon }) {
+async function createLesson(roomId, { name, imageUrl, html, order, published, comingSoon, firstPlayCoins, replayCoins }) {
   await getRoomById(roomId);
 
   const data = {
     roomId,
     name: validateLessonName(name),
     html: validateLessonHtml(html),
+    firstPlayCoins: validateCoinReward(firstPlayCoins, "firstPlayCoins", 1),
+    replayCoins: validateCoinReward(replayCoins, "replayCoins", 0),
   };
 
   const image = validateOptionalImageUrl(imageUrl);
@@ -114,6 +152,12 @@ async function updateLesson(id, payload) {
   }
   if (payload.comingSoon !== undefined) {
     data.comingSoon = Boolean(payload.comingSoon);
+  }
+  if (payload.firstPlayCoins !== undefined) {
+    data.firstPlayCoins = validateCoinReward(payload.firstPlayCoins, "firstPlayCoins");
+  }
+  if (payload.replayCoins !== undefined) {
+    data.replayCoins = validateCoinReward(payload.replayCoins, "replayCoins");
   }
 
   if (Object.keys(data).length === 0) {

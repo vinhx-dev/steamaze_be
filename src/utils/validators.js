@@ -196,6 +196,21 @@ function validateOrder(order) {
   return value;
 }
 
+// Số xu thưởng: số nguyên từ 0 trở lên
+function validateCoinReward(coins, field = "coins", defaultValue = undefined) {
+  if (coins === undefined || coins === null) {
+    return defaultValue;
+  }
+  if (typeof coins === "boolean" || (typeof coins === "string" && coins.trim() === "")) {
+    throw AppError.badRequest(`Số xu thưởng (${field}) phải là số nguyên từ 0 trở lên`, { field });
+  }
+  const value = Number(coins);
+  if (!Number.isInteger(value) || value < 0) {
+    throw AppError.badRequest(`Số xu thưởng (${field}) phải là số nguyên từ 0 trở lên`, { field });
+  }
+  return value;
+}
+
 function slugify(text) {
   return String(text || "")
     .normalize("NFD")
@@ -287,6 +302,7 @@ module.exports = {
   validateGender,
   validateLessonHtml,
   validateOrder,
+  validateCoinReward,
   MAX_IMAGE_BYTES,
   MAX_IMAGE_LABEL,
   slugify,
