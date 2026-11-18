@@ -54,6 +54,15 @@ model User {
   streak              Int                @default(0)
   lastLoginDate       String?            @db.VarChar(10) // "YYYY-MM-DD"
 
+  // Mã giới thiệu riêng, do database tự sinh cho mọi tài khoản mới
+  referralCode        String             @unique @default(dbgenerated("generate_referral_code()")) @db.VarChar(8)
+  // Thời điểm đã nhập mã của người khác: mỗi tài khoản chỉ được nhập 1 lần.
+  // Vẫn giữ khi người giới thiệu bị xoá, để không nhập lại được.
+  referralRedeemedAt  DateTime?
+  referredById        String?
+  referredBy          User?              @relation("UserReferrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals           User[]             @relation("UserReferrals")
+
   // Điểm danh nhận xu hàng ngày
   dailyCheckIns       DailyCheckIn[]
 
@@ -67,6 +76,7 @@ model User {
   shopOrders          ShopOrder[]
 
   @@index([createdAt])
+  @@index([referredById])
   @@map("users")
 }
 
