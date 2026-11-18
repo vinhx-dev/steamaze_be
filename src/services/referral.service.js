@@ -30,7 +30,8 @@ async function getMyReferral(userId) {
 }
 
 /**
- * Nhập mã của người khác: người nhập được cộng xu, mỗi tài khoản chỉ 1 lần
+ * Nhập mã của người khác: người nhập và chủ mã cùng được cộng xu.
+ * Mỗi tài khoản chỉ nhập 1 lần, chủ mã được thưởng không giới hạn số người nhập.
  */
 async function redeemReferralCode(userId, rawCode) {
   const code = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : "";
@@ -50,20 +51,41 @@ async function redeemReferralCode(userId, rawCode) {
     throw AppError.badRequest("Bạn không thể nhập mã của chính mình", { field: "code" });
   }
 
-  // Điều kiện và cộng xu nằm trong cùng một câu lệnh, nên gửi song song cũng chỉ được 1 lần
-  const [updatedUser] = await prisma.user.updateManyAndReturn({
-    where: { id: userId, referralRedeemedAt: null },
-    data: {
-      referralRedeemedAt: new Date(),
-      referredById: referrer.id,
-      coins: { increment: REFERRAL_REWARD_COINS },
-    },
-    select: { coins: true },
-  });
+  const updatedUser = await prisma.$transaction(async (tx) => {
+    // Khoá 2 tài khoản theo thứ tự cố định để 2 người nhập mã của nhau cùng lúc không bị kẹt
+    const lockedUsers = await tx.$queryRaw`
+      SELECT "id" FROM "users"
+      WHERE "id" IN (${userId}, ${referrer.id})
+      ORDER BY "id"
+      FOR UPDATE
+    `;
+    if (lockedUsers.length !== 2) {
+      throw AppError.notFound("Mã giới thiệu không tồn tại");
+    }
 
-  if (!updatedUser) {
-    throw AppError.conflict("Bạn đã nhập mã giới thiệu rồi");
-  }
+    // Điều kiện và cộng xu nằm trong cùng một câu lệnh, nên gửi song song cũng chỉ được 1 lần
+    const [redeemer] = await tx.user.updateManyAndReturn({
+      where: { id: userId, referralRedeemedAt: null },
+      data: {
+        referralRedeemedAt: new Date(),
+        referredById: referrer.id,
+        coins: { increment: REFERRAL_REWARD_COINS },
+      },
+      select: { coins: true },
+    });
+
+    if (!redeemer) {
+      throw AppError.conflict("Bạn đã nhập mã giới thiệu rồi");
+    }
+
+    await tx.user.update({
+      where: { id: referrer.id },
+      data: { coins: { increment: REFERRAL_REWARD_COINS } },
+      select: { id: true },
+    });
+
+    return redeemer;
+  });
 
   return {
     coinsEarned: REFERRAL_REWARD_COINS,
